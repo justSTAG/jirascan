@@ -279,10 +279,10 @@ def dump_to_db(path, users, projects, issues_info, issues_with_words):
 
     comment_records = (
         iter2(issues_info)
-            .flatmap(lambda issue: (
+        .flatmap(lambda issue: (
             iter2(issue['comments'])
-                .enumerate()
-                .map_t(lambda idx, content: (
+            .enumerate()
+            .map_t(lambda idx, content: (
                 issue['id'], idx, content
             ))
         ))
@@ -351,15 +351,21 @@ def main():
         print("Login successful!")
 
         print("Server info:")
-        print(get_server_info(getter))
+        server_info = get_server_info(getter)
+        print(iter2(server_info).map(str).join(' '))
         print('------')
 
         print("Passwod policy:")
-        print(get_password_policy(getter))
+        password_policy = get_password_policy(getter)
+        print(iter2(password_policy).map(str).join(' '))
         print('------')
 
         print('User permissions:')
         permissions = get_user_permissions(getter)
+        print(iter2(permissions)
+            .map_t(lambda perm, val: f'{perm} = {val}')
+            .join('\n')
+        )
         print(permissions)
         
         print('------')
@@ -383,6 +389,11 @@ def main():
             ]
         else:
             words_for_search = tuple(map(str.strip, args.w.split(',')))
+            words_for_search = (
+                iter2(args.w.split(','))
+                .map(str.strip)
+                .to_tuple()
+            )
 
         issues_with_words = pool.map(
             lambda word: (word, search_issues_by_word(getter, word)),
