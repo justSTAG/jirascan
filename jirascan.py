@@ -6,6 +6,7 @@ import sqlite3
 from multiprocessing.dummy import Pool as ThreadPool
 from iter2 import iter2
 import operator
+import time
 
 urllib3.disable_warnings()
 
@@ -98,9 +99,11 @@ def login(username, password):
             'User-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:84.0) Gecko/20100101 Firefox/84.0'
         }
 
+
         def getter(url, *, params=None):
             params = params or {}
-            return requests.get(url, params=params, headers=headers, cookies=cookies, verify=False)
+            time.sleep(DELAY)            
+            return requests.get(url, params=params, headers=headers, cookies=cookies, verify=False, proxies=PROXIES)
 
         return login_status, getter
     else:
@@ -325,11 +328,20 @@ def main():
         arg_parser.add_argument('--password', type=str, required=True)
         arg_parser.add_argument('--w', type=str)
         arg_parser.add_argument('--f', type=str, default='jira.db')
+        arg_parser.add_argument('--threads', type=int, default=100)
+        arg_parser.add_argument('--delay', type=int, default=0)
+        arg_parser.add_argument('--proxies', type=str, default="")
 
         args = arg_parser.parse_args()
 
         global HOST
         HOST = args.url
+
+        global DELAY
+        DELAY = args.delay
+
+        global PROXIES
+        PROXIES = {"http":args.proxies,"https":args.proxies} if args.proxies else {}
 
         status, getter = login(args.username, args.password)
 
@@ -357,7 +369,7 @@ def main():
         print("Collecting projects...")
         projects = get_all_projects(getter)
 
-        pool = ThreadPool(100)
+        pool = ThreadPool(args.threads)
         print("Collecting attachments...")
         print("It can take a lot of time, pls, be patient :)")
         issues_with_attachments = search_issues_with_attachments(getter)
